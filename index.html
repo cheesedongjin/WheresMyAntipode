@@ -30,77 +30,68 @@
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
       .pointOfView({ lat: 0, lng: 0, altitude: 2 });
 
-    // Group to hold marker objects
+    // 마커와 선을 담을 그룹
     const markerGroup = new THREE.Group();
     world.scene().add(markerGroup);
-    const markers = [];
-
-    // Group to hold antipode line objects
-    const lineGroup = new THREE.Group();
+    const lineGroup   = new THREE.Group();
     world.scene().add(lineGroup);
+    const markers     = [];
 
+    // 마커 생성 함수
     function createMarker(color) {
-      const mat = new THREE.MeshBasicMaterial({ color });
+      const mat  = new THREE.MeshBasicMaterial({ color });
       const cone = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 8), mat);
       cone.position.y = -0.25;
       const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), mat);
-      const group = new THREE.Group();
-      group.add(cone);
-      group.add(sphere);
-      return group;
+      const grp = new THREE.Group();
+      grp.add(cone);
+      grp.add(sphere);
+      return grp;
     }
 
+    // (lat,lng,altitude) → {x,y,z} 변환 (three-globe 내장) :contentReference[oaicite:0]{index=0}
+    function latLngToVector3(lat, lng, altitude) {
+      return world.getCoords(lat, lng, altitude);
+    }
+
+    // 마커 위치 설정
     function setMarkerPosition(marker, lat, lng, altitude) {
-      const radius = world.getGlobeRadius ? world.getGlobeRadius() : 100;
-      const phi = (90 - lat) * Math.PI / 180;
-      const theta = (lng + 180) * Math.PI / 180;
-      const r = radius * altitude;
-      marker.position.set(
-        r * Math.sin(phi) * Math.cos(theta),
-        r * Math.cos(phi),
-        r * Math.sin(phi) * Math.sin(theta)
-      );
+      const { x, y, z } = world.getCoords(lat, lng, altitude);
+      marker.position.set(x, y, z);
       marker.lookAt(0, 0, 0);
     }
 
-    function latLngToVector3(lat, lng, altitude) {
-      const radius = world.getGlobeRadius ? world.getGlobeRadius() : 100;
-      const phi = (90 - lat) * Math.PI / 180;
-      const theta = (lng + 180) * Math.PI / 180;
-      const r = radius * altitude;
-      return new THREE.Vector3(
-        r * Math.sin(phi) * Math.cos(theta),
-        r * Math.cos(phi),
-        r * Math.sin(phi) * Math.sin(theta)
-      );
-    }
-
+    // 안티포드 선 생성
     function createAntipodeLine(lat, lng, antiLat, antiLng) {
       const start = latLngToVector3(lat, lng, 1.01);
-      const end = latLngToVector3(antiLat, antiLng, 1.01);
-      const center = new THREE.Vector3(0, 0, 0);
-      const geometry = new THREE.BufferGeometry().setFromPoints([start, center, end]);
-      const material = new THREE.LineDashedMaterial({
+      const end   = latLngToVector3(antiLat, antiLng, 1.01);
+      const pts   = [
+        new THREE.Vector3(start.x, start.y, start.z),
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(end.x, end.y, end.z)
+      ];
+      const geom = new THREE.BufferGeometry().setFromPoints(pts);
+      const mat  = new THREE.LineDashedMaterial({
         color: 0xffffff,
         dashSize: 2,
         gapSize: 1,
         opacity: 0.5,
         transparent: true
       });
-      const line = new THREE.Line(geometry, material);
+      const line = new THREE.Line(geom, mat);
       line.computeLineDistances();
       return line;
     }
 
     function clearMarkers() {
-      while (markerGroup.children.length) markerGroup.remove(markerGroup.children[0]);
+      markerGroup.clear();
       markers.length = 0;
     }
-
     function clearLines() {
-      while (lineGroup.children.length) lineGroup.remove(lineGroup.children[0]);
+      lineGroup.clear();
     }
 
+    // 마커 애니메이션
     function animateMarkers() {
       markers.forEach(m => {
         m.userData.t += 0.02;
@@ -112,11 +103,12 @@
     }
     animateMarkers();
 
-    const info = document.getElementById('info');
-    const form = document.getElementById('coord-form');
+    const info     = document.getElementById('info');
+    const form     = document.getElementById('coord-form');
     const latInput = document.getElementById('lat-input');
     const lngInput = document.getElementById('lng-input');
 
+    // 좌표 → 지명 (OSM)
     function reverseGeocode(lat, lng) {
       return fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
@@ -124,57 +116,49 @@
         .then(res => res.json())
         .then(data => {
           const addr = data.address || {};
-          return (
-            addr.city ||
-            addr.town ||
-            addr.village ||
-            addr.country ||
-            'the ocean'
-          );
+          return addr.city || addr.town || addr.village || addr.country || 'the ocean';
         })
         .catch(() => 'Unknown location');
     }
 
+    // 안티포드 표시
     function showAntipode(lat, lng) {
       const antiLat = -lat;
-      const antiLng = ((lng + 180) % 360) - 180;
+      // 경도 반전 계산
+      const antiLng = lng >= 0 ? lng - 180 : lng + 180;
 
       Promise.all([reverseGeocode(lat, lng), reverseGeocode(antiLat, antiLng)])
         .then(([clickedLoc, antipodeLoc]) => {
           clearMarkers();
           clearLines();
 
+          // 클릭 마커
           const clickedMarker = createMarker(0xffff00);
           clickedMarker.userData = { lat, lng, t: 0 };
           markerGroup.add(clickedMarker);
           markers.push(clickedMarker);
+          setMarkerPosition(clickedMarker, lat, lng, 1.02);
 
+          // 안티포드 마커
           const antipodeMarker = createMarker(0xff0000);
           antipodeMarker.userData = { lat: antiLat, lng: antiLng, t: Math.PI };
           markerGroup.add(antipodeMarker);
           markers.push(antipodeMarker);
-
-          setMarkerPosition(clickedMarker, lat, lng, 1.02);
           setMarkerPosition(antipodeMarker, antiLat, antiLng, 1.02);
 
-          const line = createAntipodeLine(lat, lng, antiLat, antiLng);
-          lineGroup.add(line);
+          // 선
+          lineGroup.add(createAntipodeLine(lat, lng, antiLat, antiLng));
 
           info.innerHTML =
             `Clicked: ${clickedLoc} (${lat.toFixed(2)}, ${lng.toFixed(2)})<br>` +
             `Antipode: ${antipodeLoc} (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
-        })
-        .catch(() => {
-          info.textContent =
-            `Coordinates: (${lat.toFixed(2)}, ${lng.toFixed(2)}) → (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
         });
     }
 
-    // Handle click events
-    world.onGlobeClick(({ lat, lng }) => {
-      showAntipode(lat, lng);
-    });
+    // 클릭 이벤트
+    world.onGlobeClick(({ lat, lng }) => showAntipode(lat, lng));
 
+    // 폼 입력 처리
     form.addEventListener('submit', e => {
       e.preventDefault();
       const lat = parseFloat(latInput.value);
