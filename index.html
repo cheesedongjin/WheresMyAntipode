@@ -23,7 +23,7 @@
 
   <script type="module">
     import * as THREE from 'https://esm.sh/three@0.153.0';
-    import Globe   from 'https://esm.sh/globe.gl@2.41.1';
+    import Globe from 'https://esm.sh/globe.gl@2.41.1';
 
     // Globe 초기화
     const world = Globe()(document.getElementById('globeViz'))
@@ -33,23 +33,19 @@
     // 마커와 선을 담을 그룹
     const markerGroup = new THREE.Group();
     world.scene().add(markerGroup);
-    const lineGroup   = new THREE.Group();
+    const lineGroup = new THREE.Group();
     world.scene().add(lineGroup);
-    const markers     = [];
+    const markers = [];
 
     // 마커 생성 함수
     function createMarker(color) {
-      const mat  = new THREE.MeshBasicMaterial({ color });
-      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 8), mat);
-      cone.position.y = -0.25;
-      const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), mat);
-      const grp = new THREE.Group();
-      grp.add(cone);
-      grp.add(sphere);
-      return grp;
+      const mat = new THREE.MeshBasicMaterial({ color });
+
+      const sphere = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), mat);
+      return sphere;
     }
 
-    // (lat,lng,altitude) → {x,y,z} 변환 (three-globe 내장) :contentReference[oaicite:0]{index=0}
+    // (lat,lng,altitude) → {x,y,z} 변환 (three-globe 내장)
     function latLngToVector3(lat, lng, altitude) {
       return world.getCoords(lat, lng, altitude);
     }
@@ -58,26 +54,33 @@
     function setMarkerPosition(marker, lat, lng, altitude) {
       const { x, y, z } = world.getCoords(lat, lng, altitude);
       marker.position.set(x, y, z);
-      marker.lookAt(0, 0, 0);
+      marker.lookAt(0, 0, 0); // Make the marker point away from the center of the globe (i.e., upright)
     }
 
     // 안티포드 선 생성
     function createAntipodeLine(lat, lng, antiLat, antiLng) {
-      const start = latLngToVector3(lat, lng, 1.01);
-      const end   = latLngToVector3(antiLat, antiLng, 1.01);
-      const pts   = [
-        new THREE.Vector3(start.x, start.y, start.z),
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(end.x, end.y, end.z)
+      // 클릭 지점과 안티포드 마커는 1.01 고도
+      const a = world.getCoords(lat,     lng,     0.5);
+      const b = world.getCoords(lat,     lng,     0.1); // 표면 바로 위
+      const c = world.getCoords(antiLat, antiLng, 0.1);
+      const d = world.getCoords(antiLat, antiLng, 0.5);
+
+      const pts = [
+        new THREE.Vector3(a.x, a.y, a.z),
+        new THREE.Vector3(b.x, b.y, b.z),
+        new THREE.Vector3(c.x, c.y, c.z),
+        new THREE.Vector3(d.x, d.y, d.z)
       ];
+
       const geom = new THREE.BufferGeometry().setFromPoints(pts);
       const mat  = new THREE.LineDashedMaterial({
-        color: 0xffffff,
-        dashSize: 2,
-        gapSize: 1,
-        opacity: 0.5,
+        color:       0xffffff,
+        dashSize:    1,
+        gapSize:     1,
+        opacity:     0.5,
         transparent: true
       });
+
       const line = new THREE.Line(geom, mat);
       line.computeLineDistances();
       return line;
@@ -85,7 +88,7 @@
 
     function clearMarkers() {
       markerGroup.clear();
-      markers.length = 0;
+      markers.length = 0; // Clear the array of animated markers
     }
     function clearLines() {
       lineGroup.clear();
@@ -94,17 +97,17 @@
     // 마커 애니메이션
     function animateMarkers() {
       markers.forEach(m => {
-        m.userData.t += 0.02;
-        const alt = 1.02 + 0.02 * Math.sin(m.userData.t);
+        m.userData.t += 0.02; // Increment animation time
+        const alt = 0.51 + 0.02 * Math.sin(m.userData.t); // Oscillating altitude for "breathing" effect
         setMarkerPosition(m, m.userData.lat, m.userData.lng, alt);
-        m.rotateZ(0.05);
+        m.rotateZ(0.05); // Rotate marker around its Z-axis
       });
       requestAnimationFrame(animateMarkers);
     }
-    animateMarkers();
+    animateMarkers(); // Start the animation loop
 
-    const info     = document.getElementById('info');
-    const form     = document.getElementById('coord-form');
+    const info = document.getElementById('info');
+    const form = document.getElementById('coord-form');
     const latInput = document.getElementById('lat-input');
     const lngInput = document.getElementById('lng-input');
 
@@ -121,37 +124,49 @@
         .catch(() => 'Unknown location');
     }
 
-    // 안티포드 표시
+    // 안티포드 표시 (즉시 업데이트 개선)
     function showAntipode(lat, lng) {
       const antiLat = -lat;
       // 경도 반전 계산
       const antiLng = lng >= 0 ? lng - 180 : lng + 180;
 
+      // 기존 마커와 선을 즉시 제거
+      clearMarkers();
+      clearLines();
+
+      // 클릭된 마커를 즉시 생성 및 추가
+      const clickedMarker = createMarker(0xffff00); // Yellow marker for clicked location
+      clickedMarker.userData = { lat, lng, t: 0 };
+      markerGroup.add(clickedMarker);
+      markers.push(clickedMarker);
+      setMarkerPosition(clickedMarker, lat, lng, 1.01); // Altitude set to 1.01 for the pin's tip on surface
+
+      // 안티포드 마커를 즉시 생성 및 추가
+      const antipodeMarker = createMarker(0xff0000); // Red marker for antipode
+      antipodeMarker.userData = { lat: antiLat, lng: antiLng, t: Math.PI }; // Offset animation phase
+      markerGroup.add(antipodeMarker);
+      markers.push(antipodeMarker);
+      setMarkerPosition(antipodeMarker, antiLat, antiLng, 1.01); // Altitude set to 1.01 for the pin's tip on surface
+
+      // 선을 즉시 추가
+      lineGroup.add(createAntipodeLine(lat, lng, antiLat, antiLng));
+
+      // 초기 정보 텍스트 (좌표만 표시)
+      info.innerHTML =
+        `Clicked: (${lat.toFixed(2)}, ${lng.toFixed(2)})<br>` +
+        `Antipode: (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
+
+      // 비동기적으로 지명 정보를 가져와서 정보 텍스트 업데이트
       Promise.all([reverseGeocode(lat, lng), reverseGeocode(antiLat, antiLng)])
         .then(([clickedLoc, antipodeLoc]) => {
-          clearMarkers();
-          clearLines();
-
-          // 클릭 마커
-          const clickedMarker = createMarker(0xffff00);
-          clickedMarker.userData = { lat, lng, t: 0 };
-          markerGroup.add(clickedMarker);
-          markers.push(clickedMarker);
-          setMarkerPosition(clickedMarker, lat, lng, 1.02);
-
-          // 안티포드 마커
-          const antipodeMarker = createMarker(0xff0000);
-          antipodeMarker.userData = { lat: antiLat, lng: antiLng, t: Math.PI };
-          markerGroup.add(antipodeMarker);
-          markers.push(antipodeMarker);
-          setMarkerPosition(antipodeMarker, antiLat, antiLng, 1.02);
-
-          // 선
-          lineGroup.add(createAntipodeLine(lat, lng, antiLat, antiLng));
-
           info.innerHTML =
             `Clicked: ${clickedLoc} (${lat.toFixed(2)}, ${lng.toFixed(2)})<br>` +
             `Antipode: ${antipodeLoc} (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
+        })
+        .catch(() => {
+          // 지오코딩 실패 시 오류 메시지
+          info.innerHTML = `Clicked: Unknown location (${lat.toFixed(2)}, ${lng.toFixed(2)})<br>` +
+                           `Antipode: Unknown location (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
         });
     }
 
@@ -163,9 +178,12 @@
       e.preventDefault();
       const lat = parseFloat(latInput.value);
       const lng = parseFloat(lngInput.value);
-      if (isNaN(lat) || isNaN(lng)) return;
-      world.pointOfView({ lat, lng, altitude: 2 });
-      showAntipode(lat, lng);
+      if (isNaN(lat) || isNaN(lng)) {
+        alert('Please enter valid numbers for latitude and longitude.');
+        return;
+      }
+      world.pointOfView({ lat, lng, altitude: 2 }, 700); // Fly to initial view over 700ms
+      showAntipode(lat, lng); // Show antipode for the entered coordinates
     });
   </script>
 </body>
