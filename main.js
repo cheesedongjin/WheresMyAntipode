@@ -8,6 +8,10 @@ const markerGroup = new THREE.Group();
 world.scene().add(markerGroup);
 const markers = [];
 
+// Group to hold antipode line objects
+const lineGroup = new THREE.Group();
+world.scene().add(lineGroup);
+
 function createMarker(color) {
   const mat = new THREE.MeshBasicMaterial({ color });
   const cone = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 8), mat);
@@ -32,9 +36,42 @@ function setMarkerPosition(marker, lat, lng, altitude) {
   marker.lookAt(0, 0, 0);
 }
 
+function latLngToVector3(lat, lng, altitude) {
+  const radius = world.getGlobeRadius ? world.getGlobeRadius() : 100;
+  const phi = (90 - lat) * Math.PI / 180;
+  const theta = (lng + 180) * Math.PI / 180;
+  const r = radius * altitude;
+  return new THREE.Vector3(
+    r * Math.sin(phi) * Math.cos(theta),
+    r * Math.cos(phi),
+    r * Math.sin(phi) * Math.sin(theta)
+  );
+}
+
+function createAntipodeLine(lat, lng, antiLat, antiLng) {
+  const start = latLngToVector3(lat, lng, 1.01);
+  const end = latLngToVector3(antiLat, antiLng, 1.01);
+  const center = new THREE.Vector3(0, 0, 0);
+  const geometry = new THREE.BufferGeometry().setFromPoints([start, center, end]);
+  const material = new THREE.LineDashedMaterial({
+    color: 0xffffff,
+    dashSize: 2,
+    gapSize: 1,
+    opacity: 0.5,
+    transparent: true
+  });
+  const line = new THREE.Line(geometry, material);
+  line.computeLineDistances();
+  return line;
+}
+
 function clearMarkers() {
   while (markerGroup.children.length) markerGroup.remove(markerGroup.children[0]);
   markers.length = 0;
+}
+
+function clearLines() {
+  while (lineGroup.children.length) lineGroup.remove(lineGroup.children[0]);
 }
 
 function animateMarkers() {
@@ -78,6 +115,7 @@ function showAntipode(lat, lng) {
   Promise.all([reverseGeocode(lat, lng), reverseGeocode(antiLat, antiLng)])
     .then(([clickedLoc, antipodeLoc]) => {
       clearMarkers();
+      clearLines();
 
       const clickedMarker = createMarker(0xffff00);
       clickedMarker.userData = { lat, lng, t: 0 };
@@ -91,6 +129,9 @@ function showAntipode(lat, lng) {
 
       setMarkerPosition(clickedMarker, lat, lng, 1.02);
       setMarkerPosition(antipodeMarker, antiLat, antiLng, 1.02);
+
+      const line = createAntipodeLine(lat, lng, antiLat, antiLng);
+      lineGroup.add(line);
 
       info.innerHTML =
         `Clicked: ${clickedLoc} (${lat.toFixed(2)}, ${lng.toFixed(2)})<br>` +
