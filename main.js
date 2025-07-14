@@ -53,21 +53,32 @@ const form = document.getElementById('coord-form');
 const latInput = document.getElementById('lat-input');
 const lngInput = document.getElementById('lng-input');
 
+function reverseGeocode(lat, lng) {
+  return fetch(
+    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+  )
+    .then(res => res.json())
+    .then(data => {
+      const addr = data.address || {};
+      return (
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.country ||
+        'the ocean'
+      );
+    })
+    .catch(() => 'Unknown location');
+}
+
 function showAntipode(lat, lng) {
   const antiLat = -lat;
   const antiLng = ((lng + 180) % 360) - 180;
 
-  fetch(`https://nominatim.openstreetmap.org/reverse?lat=${antiLat}&lon=${antiLng}&format=json`)
-    .then(res => res.json())
-    .then(data => {
-      const location =
-        data.address.city ||
-        data.address.town ||
-        data.address.village ||
-        data.address.country ||
-        'the ocean';
-
+  Promise.all([reverseGeocode(lat, lng), reverseGeocode(antiLat, antiLng)])
+    .then(([clickedLoc, antipodeLoc]) => {
       clearMarkers();
+
       const clickedMarker = createMarker(0xffff00);
       clickedMarker.userData = { lat, lng, t: 0 };
       markerGroup.add(clickedMarker);
@@ -81,12 +92,13 @@ function showAntipode(lat, lng) {
       setMarkerPosition(clickedMarker, lat, lng, 1.02);
       setMarkerPosition(antipodeMarker, antiLat, antiLng, 1.02);
 
-      world.pointLabel(() => `${location}\n(${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`);
-
-      info.textContent = `${location} (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
+      info.innerHTML =
+        `Clicked: ${clickedLoc} (${lat.toFixed(2)}, ${lng.toFixed(2)})<br>` +
+        `Antipode: ${antipodeLoc} (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
     })
     .catch(() => {
-      info.textContent = `Coordinates: ${antiLat.toFixed(2)}, ${antiLng.toFixed(2)}`;
+      info.textContent =
+        `Coordinates: (${lat.toFixed(2)}, ${lng.toFixed(2)}) → (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
     });
 }
 
