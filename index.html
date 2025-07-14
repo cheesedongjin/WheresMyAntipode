@@ -18,6 +18,11 @@
   <div id="globe-container">
     <div id="globeViz"></div>
     <div id="info">Click anywhere on the globe to find the antipodal location.</div>
+    <form id="coord-form">
+      <input type="number" id="lat-input" placeholder="Latitude" step="any" required />
+      <input type="number" id="lng-input" placeholder="Longitude" step="any" required />
+      <button type="submit">Go</button>
+    </form>
   </div>
   <script src="main.js"></script>
 </body>

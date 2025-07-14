@@ -49,9 +49,11 @@ function animateMarkers() {
 animateMarkers();
 
 const info = document.getElementById('info');
+const form = document.getElementById('coord-form');
+const latInput = document.getElementById('lat-input');
+const lngInput = document.getElementById('lng-input');
 
-// Handle click events
-world.onGlobeClick(({ lat, lng }) => {
+function showAntipode(lat, lng) {
   const antiLat = -lat;
   const antiLng = ((lng + 180) % 360) - 180;
 
@@ -79,7 +81,6 @@ world.onGlobeClick(({ lat, lng }) => {
       setMarkerPosition(clickedMarker, lat, lng, 1.02);
       setMarkerPosition(antipodeMarker, antiLat, antiLng, 1.02);
 
-      world.pointsData([]);
       world.pointLabel(() => `${location}\n(${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`);
 
       info.textContent = `${location} (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
@@ -87,4 +88,18 @@ world.onGlobeClick(({ lat, lng }) => {
     .catch(() => {
       info.textContent = `Coordinates: ${antiLat.toFixed(2)}, ${antiLng.toFixed(2)}`;
     });
+}
+
+// Handle click events
+world.onGlobeClick(({ lat, lng }) => {
+  showAntipode(lat, lng);
+});
+
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const lat = parseFloat(latInput.value);
+  const lng = parseFloat(lngInput.value);
+  if (isNaN(lat) || isNaN(lng)) return;
+  world.pointOfView({ lat, lng, altitude: 2 });
+  showAntipode(lat, lng);
 });
