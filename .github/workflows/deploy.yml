@@ -25,6 +25,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # Required for OIDC
+      contents: read    # Required for GitHub Pages deployment
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
