@@ -6,3 +6,7 @@ The interface now features a modern dark theme and an on-screen display of antip
 ## Usage
 
 Open `index.html` in a modern web browser. Click anywhere on the globe to see the antipodal location along with its coordinates.
+
+## Deployment
+
+The site is automatically deployed to **GitHub Pages** using a GitHub Actions workflow. Any changes pushed to the `main` branch will trigger the workflow and publish the updated site.
