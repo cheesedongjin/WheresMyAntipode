@@ -6,3 +6,5 @@ The interface now features a modern dark theme and an on-screen display of antip
 ## Usage
 
 Open `index.html` in a modern web browser. Click anywhere on the globe to see the antipodal location along with its coordinates.
+
+The header includes a link to **Other Sites by Jdeseech**, which showcases additional sites.
