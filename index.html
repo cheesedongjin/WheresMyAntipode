@@ -4,11 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's My Antipode?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://unpkg.com/globe.gl"></script>
 </head>
 <body>
-  <div id="globeViz"></div>
+  <header>Where's My Antipode?</header>
+  <div id="globe-container">
+    <div id="globeViz"></div>
+    <div id="info">Click anywhere on the globe to find the antipodal location.</div>
+  </div>
   <script src="main.js"></script>
 </body>
 </html>
