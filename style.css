@@ -1,11 +1,42 @@
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  font-family: sans-serif;
+  font-family: 'Roboto', sans-serif;
+  background-color: #121212;
+  color: #ffffff;
+}
+
+header {
+  text-align: center;
+  padding: 1rem;
+  background-color: #1f1f1f;
+  font-size: 1.5rem;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+#globe-container {
+  position: relative;
+  width: 100%;
+  height: calc(100% - 64px);
 }
 
 #globeViz {
   width: 100%;
   height: 100%;
+}
+
+#info {
+  position: absolute;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  pointer-events: none;
+  font-size: 1rem;
+  white-space: nowrap;
 }
