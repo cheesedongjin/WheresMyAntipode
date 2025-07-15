@@ -324,11 +324,6 @@ button:active {
   font-family: 'Inter', monospace;
 }
 
-.near-country {
-  opacity: 0.8;
-  color: var(--accent-color);
-}
-
 /* 반응형 디자인 */
 @media (max-width: 768px) {
   header {
