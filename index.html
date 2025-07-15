@@ -306,7 +306,9 @@
       }
     }
 
-    async function nearestCountry(lat, lng) {
+    const NEAR_THRESHOLD_KM = 200;
+
+    async function nearestCountry(lat, lng, threshold = NEAR_THRESHOLD_KM) {
       const data = await countriesDataPromise;
       const pt = turf.point([lng, lat]);
       let min = Infinity;
@@ -319,7 +321,7 @@
           nearest = f.properties.name;
         }
       });
-      return nearest;
+      return min <= threshold ? nearest : null;
     }
 
     async function getCountryFeature(lat, lng) {
@@ -387,14 +389,15 @@
 
       // 지명 정보 업데이트
       Promise.all([reverseGeocode(lat, lng), reverseGeocode(antiLat, antiLng)])
-        .then(async ([clickedLoc, antipodeLoc]) => {
+        .then(async results => {
+          let [clickedLoc, antipodeLoc] = results;
           if (clickedLoc === 'Ocean') {
             const near = await nearestCountry(lat, lng);
-            clickedLoc = `Ocean (near ${near})`;
+            if (near) clickedLoc = `Ocean (near ${near})`;
           }
           if (antipodeLoc === 'Ocean') {
             const near = await nearestCountry(antiLat, antiLng);
-            antipodeLoc = `Ocean (near ${near})`;
+            if (near) antipodeLoc = `Ocean (near ${near})`;
           }
           document.getElementById('clicked-name').textContent = clickedLoc;
           document.getElementById('antipode-name').textContent = antipodeLoc;
