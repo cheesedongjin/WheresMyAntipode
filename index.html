@@ -95,6 +95,7 @@
     import * as THREE from 'https://esm.sh/three@0.153.0';
     import Globe from 'https://esm.sh/globe.gl@2.41.1';
     import * as turf from 'https://esm.sh/@turf/turf@6';
+    import SpriteText from 'https://esm.sh/three-spritetext@2';
 
     function ringArea(r) {
       let a = 0;
@@ -194,6 +195,8 @@
     world.scene().add(markerGroup);
     const lineGroup = new THREE.Group();
     world.scene().add(lineGroup);
+    const labelGroup = new THREE.Group();
+    world.scene().add(labelGroup);
     const markers = [];
 
     // 마커 생성 함수 (개선된 디자인)
@@ -261,6 +264,26 @@
 
     function clearLines() {
       lineGroup.clear();
+    }
+
+    function clearLabels() {
+      labelGroup.clear();
+    }
+
+    function createDistanceLabel(lat, lng, antiLat, antiLng, distance) {
+      const b = world.getCoords(lat, lng, 0.1);
+      const c = world.getCoords(antiLat, antiLng, 0.1);
+      const mid = {
+        x: (b.x + c.x) / 2,
+        y: (b.y + c.y) / 2,
+        z: (b.z + c.z) / 2
+      };
+      const label = new SpriteText(`${distance.toFixed(0)} km`);
+      label.color = '#ffffff';
+      label.textHeight = 2;
+      label.material.depthWrite = false;
+      label.position.set(mid.x, mid.y, mid.z);
+      return label;
     }
 
     // 개선된 마커 애니메이션
@@ -451,6 +474,7 @@
 
       clearMarkers();
       clearLines();
+      clearLabels();
       highlightedCountries.length = 0;
       world.polygonsData(highlightedCountries);
 
@@ -468,6 +492,8 @@
       setMarkerPosition(antipodeMarker, antiLat, antiLng, 1.01);
 
       lineGroup.add(createAntipodeLine(lat, lng, antiLat, antiLng));
+      const distKm = turf.distance([lng, lat], [antiLng, antiLat], { units: 'kilometers' });
+      labelGroup.add(createDistanceLabel(lat, lng, antiLat, antiLng, distKm));
 
       Promise.all([
         getCountryFeature(lat, lng),
