@@ -95,7 +95,7 @@
     import * as THREE from 'https://esm.sh/three@0.153.0';
     import Globe from 'https://esm.sh/globe.gl@2.41.1';
     import * as turf from 'https://esm.sh/@turf/turf@6';
-    import SpriteText from 'https://esm.sh/three-spritetext@2';
+    import SpriteText from 'https://esm.sh/three-spritetext@1.10.0';
 
     function ringArea(r) {
       let a = 0;
@@ -386,7 +386,7 @@
       }
     }
 
-    const NEAR_THRESHOLD_KM = 400;
+    const NEAR_THRESHOLD_KM = 6000;
 
     async function nearestCountry(lat, lng, threshold = NEAR_THRESHOLD_KM) {
       const data = await countriesDataPromise;
