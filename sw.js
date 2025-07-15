@@ -3,7 +3,11 @@ const EARTH_IMG = 'https://unpkg.com/three-globe/example/img/earth-night.jpg';
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.add(new Request(EARTH_IMG, { mode: "no-cors" })))
+    caches.open(CACHE_NAME).then(cache =>
+      cache.add(new Request(EARTH_IMG, { mode: 'no-cors' })).catch(err => {
+        console.error('Failed to cache earth texture', err);
+      })
+    )
   );
 });
 
