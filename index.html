@@ -465,8 +465,10 @@
             const near = await nearestCountry(antiLat, antiLng);
             if (near) antipodeLoc = `Ocean (near ${near})`;
           }
-          document.getElementById('clicked-name').textContent = clickedLoc;
-          document.getElementById('antipode-name').textContent = antipodeLoc;
+          const emphasizeNear = t =>
+            t.replace(/\(near ([^)]+)\)/, '(<span class="near-country">near $1</span>)');
+          document.getElementById('clicked-name').innerHTML = emphasizeNear(clickedLoc);
+          document.getElementById('antipode-name').innerHTML = emphasizeNear(antipodeLoc);
           document.getElementById('clicked-name').classList.remove('loading');
           document.getElementById('antipode-name').classList.remove('loading');
         })
