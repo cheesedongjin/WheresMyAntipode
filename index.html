@@ -129,6 +129,18 @@
       .pointOfView({ lat: 0, lng: 0, altitude: 2 })
       .backgroundColor('rgba(0,0,0,0)');
 
+    // countries highlight layer
+    const highlightedCountries = [];
+    world.polygonsData(highlightedCountries)
+      .polygonAltitude(0.01)
+      .polygonCapColor(d => d.properties._role === 'start'
+        ? 'rgba(245,158,11,0.5)'
+        : 'rgba(239,68,68,0.5)')
+      .polygonSideColor(() => 'rgba(255,255,255,0.15)')
+      .polygonStrokeColor(d => d.properties._role === 'start'
+        ? '#f59e0b'
+        : '#ef4444');
+
     // Collapse panel when the user interacts with the globe
     world.controls().addEventListener('start', () => {
       const panel = document.getElementById('controlPanel');
@@ -310,6 +322,16 @@
       return nearest;
     }
 
+    async function getCountryFeature(lat, lng) {
+      try {
+        const data = await countriesDataPromise;
+        const pt = turf.point([lng, lat]);
+        return data.features.find(f => turf.booleanPointInPolygon(pt, f));
+      } catch (e) {
+        return null;
+      }
+    }
+
     // 개선된 안티포드 표시
     function showAntipode(lat, lng) {
       const antiLat = -lat;
@@ -317,6 +339,8 @@
 
       clearMarkers();
       clearLines();
+      highlightedCountries.length = 0;
+      world.polygonsData(highlightedCountries);
 
       // 마커 생성
       const clickedMarker = createMarker(0xf59e0b, false);
@@ -332,6 +356,23 @@
       setMarkerPosition(antipodeMarker, antiLat, antiLng, 1.01);
 
       lineGroup.add(createAntipodeLine(lat, lng, antiLat, antiLng));
+
+      Promise.all([
+        getCountryFeature(lat, lng),
+        getCountryFeature(antiLat, antiLng)
+      ]).then(([startF, antiF]) => {
+        if (startF) {
+          const c = JSON.parse(JSON.stringify(startF));
+          c.properties._role = 'start';
+          highlightedCountries.push(c);
+        }
+        if (antiF) {
+          const c = JSON.parse(JSON.stringify(antiF));
+          c.properties._role = 'antipode';
+          highlightedCountries.push(c);
+        }
+        world.polygonsData(highlightedCountries);
+      });
 
       // UI 업데이트
       info.style.display = 'block';
