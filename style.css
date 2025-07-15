@@ -581,3 +581,30 @@ button:active {
    transform: translateY(0);
  }
 }
+
+/* 기본 링크 스타일 */
+a {
+ color: var(--accent-color);
+ text-decoration: none;
+ transition: all 0.3s ease;
+}
+
+a:hover {
+ color: var(--accent-hover);
+ text-decoration: underline;
+}
+
+a:focus {
+ outline: 2px solid var(--accent-color);
+ outline-offset: 2px;
+ border-radius: 4px;
+}
+
+a:visited {
+ color: var(--text-secondary);
+}
+
+a:active {
+ color: var(--accent-hover);
+ transform: scale(0.98);
+}
