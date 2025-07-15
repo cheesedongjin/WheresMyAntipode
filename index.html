@@ -89,6 +89,9 @@
   <script type="module">
     import * as THREE from 'https://esm.sh/three@0.153.0';
     import Globe from 'https://esm.sh/globe.gl@2.41.1';
+    import * as turf from 'https://esm.sh/@turf/turf@6';
+
+    const countriesDataPromise = fetch('countries.geojson').then(res => res.json());
 
     // 패널 토글 함수
     function togglePanel() {
@@ -229,18 +232,16 @@
       }, 3000);
     }
 
-    // 개선된 지오코딩
-    function reverseGeocode(lat, lng) {
-      return fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=10`
-      )
-        .then(res => res.json())
-        .then(data => {
-          if (data.error) return 'Unknown location';
-          const addr = data.address || {};
-          return addr.city || addr.town || addr.village || addr.state || addr.country || 'Ocean';
-        })
-        .catch(() => 'Unknown location');
+    // countries.geojson 을 이용한 지역 추출
+    async function reverseGeocode(lat, lng) {
+      try {
+        const data = await countriesDataPromise;
+        const pt = turf.point([lng, lat]);
+        const country = data.features.find(f => turf.booleanPointInPolygon(pt, f));
+        return country ? country.properties.name : 'Ocean';
+      } catch (e) {
+        return 'Unknown location';
+      }
     }
 
     // 개선된 안티포드 표시
