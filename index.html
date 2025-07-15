@@ -7,18 +7,372 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', 'G-D4VPZBZ8T4');
 </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's My Antipode?</title>
-  <meta property="og:title" content="{{ title }}">
-  <meta property="og:description" content="Personal website of Dongwook Lee">
+  <meta property="og:title" content="Where's My Antipode?">
+  <meta property="og:description" content="Find the exact opposite point on Earth">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://cheesedongjin.github.io/CheeseV/">
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-bg: #0a0a0a;
+      --secondary-bg: #1a1a1a;
+      --accent-bg: #2a2a2a;
+      --text-primary: #ffffff;
+      --text-secondary: #a0a0a0;
+      --accent-color: #4f46e5;
+      --accent-hover: #6366f1;
+      --border-color: #333333;
+      --success-color: #10b981;
+      --warning-color: #f59e0b;
+      --danger-color: #ef4444;
+      --glass-bg: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--primary-bg);
+      color: var(--text-primary);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 배경 그라디언트 애니메이션 */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+      animation: gradientShift 20s ease infinite;
+      pointer-events: none;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      z-index: 1000;
+    }
+
+    #title {
+      display: flex;
+      align-items: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      gap: 0.5rem;
+    }
+
+    #title img {
+      height: 2rem;
+      width: 2rem;
+      filter: drop-shadow(0 0 10px rgba(79, 70, 229, 0.5));
+    }
+
+    nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      border: 1px solid transparent;
+    }
+
+    nav a:hover {
+      color: var(--text-primary);
+      background: var(--glass-bg);
+      border-color: var(--glass-border);
+      transform: translateY(-1px);
+    }
+
+    #globe-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      padding-top: 80px;
+    }
+
+    #globeViz {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 컨트롤 패널 */
+    .control-panel {
+      position: fixed;
+      bottom: 2rem;
+      left: 2rem;
+      right: 2rem;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      z-index: 1000;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    #info {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: var(--accent-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    #coord-form {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .input-group label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="number"] {
+      background: var(--secondary-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: 'Inter', monospace;
+      width: 120px;
+      transition: all 0.3s ease;
+    }
+
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    button {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    /* 결과 표시 */
+    .result-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .location-card {
+      background: var(--secondary-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .location-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--warning-color), var(--accent-color));
+    }
+
+    .location-card.antipode::before {
+      background: linear-gradient(90deg, var(--danger-color), var(--warning-color));
+    }
+
+    .location-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+    }
+
+    .location-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .location-coords {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-family: 'Inter', monospace;
+    }
+
+    /* 반응형 디자인 */
+    @media (max-width: 768px) {
+      header {
+        padding: 0 1rem;
+      }
+
+      #title {
+        font-size: 1.2rem;
+      }
+
+      .control-panel {
+        bottom: 1rem;
+        left: 1rem;
+        right: 1rem;
+        padding: 1rem;
+      }
+
+      #coord-form {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .result-info {
+        grid-template-columns: 1fr;
+      }
+
+      input[type="number"] {
+        width: 100%;
+      }
+    }
+
+    /* 로딩 애니메이션 */
+    .loading {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* 성공 메시지 */
+    .success-message {
+      position: fixed;
+      top: 100px;
+      right: 2rem;
+      background: var(--success-color);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 500;
+      z-index: 1001;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+    }
+
+    .success-message.show {
+      transform: translateX(0);
+    }
+
+    /* 인스트럭션 개선 */
+    .instruction {
+      text-align: center;
+      padding: 1rem;
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(139, 92, 246, 0.1));
+      border: 1px solid rgba(79, 70, 229, 0.2);
+      border-radius: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .instruction-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .instruction-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+  </style>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
@@ -30,19 +384,48 @@
 <body>
   <header>
     <span id="title">
-      <img src="icon.png" alt="Icon" style="height: 1.4em; vertical-align: middle; margin-right: 0.4em;">
+      <img src="icon.png" alt="Icon">
       Where's My Antipode?
     </span>
     <nav><a href="other-sites/addresses">Other Sites by Jdeseech</a></nav>
   </header>
+
   <div id="globe-container">
     <div id="globeViz"></div>
-    <div id="info">Right-click anywhere on the globe to find the antipodal location.</div>
+  </div>
+
+  <div class="control-panel">
+    <div class="instruction">
+      <div class="instruction-title">🌍 Find Your Antipode</div>
+      <div class="instruction-text">Right-click anywhere on the globe or enter coordinates below</div>
+    </div>
+
     <form id="coord-form">
-      <input id="latInput" type="number" step="0.01" min="-90" max="90" placeholder="Latitude" />
-      <input id="lngInput" type="number" step="0.01" min="-180" max="180" placeholder="Longitude" />
-      <button type="submit">Go</button>
+      <div class="input-group">
+        <label for="latInput">Latitude</label>
+        <input id="latInput" type="number" step="0.01" min="-90" max="90" placeholder="0.00" />
+      </div>
+      <div class="input-group">
+        <label for="lngInput">Longitude</label>
+        <input id="lngInput" type="number" step="0.01" min="-180" max="180" placeholder="0.00" />
+      </div>
+      <button type="submit">🔍 Find Antipode</button>
     </form>
+
+    <div id="info" style="display: none;">
+      <div class="result-info">
+        <div class="location-card">
+          <div class="location-title">📍 Clicked Location</div>
+          <div class="location-name" id="clicked-name">Loading...</div>
+          <div class="location-coords" id="clicked-coords"></div>
+        </div>
+        <div class="location-card antipode">
+          <div class="location-title">🌏 Antipode</div>
+          <div class="location-name" id="antipode-name">Loading...</div>
+          <div class="location-coords" id="antipode-coords"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script type="module">
@@ -52,7 +435,8 @@
     // Globe 초기화
     const world = Globe()(document.getElementById('globeViz'))
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
-      .pointOfView({ lat: 0, lng: 0, altitude: 2 });
+      .pointOfView({ lat: 0, lng: 0, altitude: 2 })
+      .backgroundColor('rgba(0,0,0,0)');
 
     // 마커와 선을 담을 그룹
     const markerGroup = new THREE.Group();
@@ -61,31 +445,39 @@
     world.scene().add(lineGroup);
     const markers = [];
 
-    // 마커 생성 함수
-    function createMarker(color) {
-      const mat = new THREE.MeshBasicMaterial({ color });
+    // 마커 생성 함수 (개선된 디자인)
+    function createMarker(color, isAntipode = false) {
+      const mat = new THREE.MeshPhongMaterial({
+        color,
+        shininess: 100,
+        transparent: true,
+        opacity: 0.9
+      });
 
-      const sphere = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), mat);
+      const sphere = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), mat);
+
+      // 글로우 효과
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.3
+      });
+      const glowSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 16, 16), glowMat);
+
+      sphere.add(glowSphere);
       return sphere;
     }
 
-    // (lat,lng,altitude) → {x,y,z} 변환 (three-globe 내장)
-    function latLngToVector3(lat, lng, altitude) {
-      return world.getCoords(lat, lng, altitude);
-    }
-
-    // 마커 위치 설정
     function setMarkerPosition(marker, lat, lng, altitude) {
       const { x, y, z } = world.getCoords(lat, lng, altitude);
       marker.position.set(x, y, z);
-      marker.lookAt(0, 0, 0); // Make the marker point away from the center of the globe (i.e., upright)
+      marker.lookAt(0, 0, 0);
     }
 
-    // 안티포드 선 생성
+    // 개선된 안티포드 선
     function createAntipodeLine(lat, lng, antiLat, antiLng) {
-      // 클릭 지점과 안티포드 마커는 1.01 고도
-      const a = world.getCoords(lat,     lng,     0.5);
-      const b = world.getCoords(lat,     lng,     0.1); // 표면 바로 위
+      const a = world.getCoords(lat, lng, 0.5);
+      const b = world.getCoords(lat, lng, 0.1);
       const c = world.getCoords(antiLat, antiLng, 0.1);
       const d = world.getCoords(antiLat, antiLng, 0.5);
 
@@ -97,12 +489,13 @@
       ];
 
       const geom = new THREE.BufferGeometry().setFromPoints(pts);
-      const mat  = new THREE.LineDashedMaterial({
-        color:       0xffffff,
-        dashSize:    1,
-        gapSize:     1,
-        opacity:     0.5,
-        transparent: true
+      const mat = new THREE.LineDashedMaterial({
+        color: 0x4f46e5,
+        dashSize: 2,
+        gapSize: 1,
+        opacity: 0.8,
+        transparent: true,
+        linewidth: 2
       });
 
       const line = new THREE.Line(geom, mat);
@@ -112,23 +505,29 @@
 
     function clearMarkers() {
       markerGroup.clear();
-      markers.length = 0; // Clear the array of animated markers
+      markers.length = 0;
     }
+
     function clearLines() {
       lineGroup.clear();
     }
 
-    // 마커 애니메이션
+    // 개선된 마커 애니메이션
     function animateMarkers() {
       markers.forEach(m => {
-        m.userData.t += 0.02; // Increment animation time
-        const alt = 0.51 + 0.02 * Math.sin(m.userData.t); // Oscillating altitude for "breathing" effect
+        m.userData.t += 0.015;
+        const alt = 0.51 + 0.03 * Math.sin(m.userData.t);
         setMarkerPosition(m, m.userData.lat, m.userData.lng, alt);
-        m.rotateZ(0.05); // Rotate marker around its Z-axis
+        m.rotateY(0.02);
+
+        // 글로우 효과 애니메이션
+        if (m.children[0]) {
+          m.children[0].material.opacity = 0.2 + 0.1 * Math.sin(m.userData.t * 2);
+        }
       });
       requestAnimationFrame(animateMarkers);
     }
-    animateMarkers(); // Start the animation loop
+    animateMarkers();
 
     const info = document.getElementById('info');
     const form = document.getElementById('coord-form');
@@ -139,72 +538,96 @@
       e.preventDefault();
       const lat = parseFloat(latInput.value);
       const lng = parseFloat(lngInput.value);
-      if (isNaN(lat) || isNaN(lng)) return;
+      if (isNaN(lat) || isNaN(lng)) {
+        showNotification('Please enter valid coordinates', 'error');
+        return;
+      }
       showAntipode(lat, lng);
     });
 
-    // 좌표 → 지명 (OSM)
+    // 알림 표시
+    function showNotification(message, type = 'success') {
+      const notification = document.createElement('div');
+      notification.className = `success-message ${type}`;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+
+      setTimeout(() => notification.classList.add('show'), 100);
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    // 개선된 지오코딩
     function reverseGeocode(lat, lng) {
       return fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=10`
       )
         .then(res => res.json())
         .then(data => {
+          if (data.error) return 'Unknown location';
           const addr = data.address || {};
-          return addr.city || addr.town || addr.village || addr.country || 'the ocean';
+          return addr.city || addr.town || addr.village || addr.state || addr.country || 'Ocean';
         })
         .catch(() => 'Unknown location');
     }
 
-    // 안티포드 표시 (즉시 업데이트 개선)
+    // 개선된 안티포드 표시
     function showAntipode(lat, lng) {
       const antiLat = -lat;
-      // 경도 반전 계산
       const antiLng = lng >= 0 ? lng - 180 : lng + 180;
 
-      // 기존 마커와 선을 즉시 제거
       clearMarkers();
       clearLines();
 
-      // 클릭된 마커를 즉시 생성 및 추가
-      const clickedMarker = createMarker(0xffff00); // Yellow marker for clicked location
+      // 마커 생성
+      const clickedMarker = createMarker(0xf59e0b, false);
       clickedMarker.userData = { lat, lng, t: 0 };
       markerGroup.add(clickedMarker);
       markers.push(clickedMarker);
-      setMarkerPosition(clickedMarker, lat, lng, 1.01); // Altitude set to 1.01 for the pin's tip on surface
+      setMarkerPosition(clickedMarker, lat, lng, 1.01);
 
-      // 안티포드 마커를 즉시 생성 및 추가
-      const antipodeMarker = createMarker(0xff0000); // Red marker for antipode
-      antipodeMarker.userData = { lat: antiLat, lng: antiLng, t: Math.PI }; // Offset animation phase
+      const antipodeMarker = createMarker(0xef4444, true);
+      antipodeMarker.userData = { lat: antiLat, lng: antiLng, t: Math.PI };
       markerGroup.add(antipodeMarker);
       markers.push(antipodeMarker);
-      setMarkerPosition(antipodeMarker, antiLat, antiLng, 1.01); // Altitude set to 1.01 for the pin's tip on surface
+      setMarkerPosition(antipodeMarker, antiLat, antiLng, 1.01);
 
-      // 선을 즉시 추가
       lineGroup.add(createAntipodeLine(lat, lng, antiLat, antiLng));
 
-      // 초기 정보 텍스트 (좌표만 표시)
-      info.innerHTML =
-        `Clicked: (${lat.toFixed(2)}, ${lng.toFixed(2)})<br>` +
-        `Antipode: (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
+      // UI 업데이트
+      info.style.display = 'block';
+      document.getElementById('clicked-coords').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      document.getElementById('antipode-coords').textContent = `${antiLat.toFixed(4)}, ${antiLng.toFixed(4)}`;
 
-      // 비동기적으로 지명 정보를 가져와서 정보 텍스트 업데이트
+      // 로딩 상태
+      document.getElementById('clicked-name').textContent = 'Loading...';
+      document.getElementById('antipode-name').textContent = 'Loading...';
+      document.getElementById('clicked-name').classList.add('loading');
+      document.getElementById('antipode-name').classList.add('loading');
+
+      // 지명 정보 업데이트
       Promise.all([reverseGeocode(lat, lng), reverseGeocode(antiLat, antiLng)])
         .then(([clickedLoc, antipodeLoc]) => {
-          info.innerHTML =
-            `Clicked: ${clickedLoc} (${lat.toFixed(2)}, ${lng.toFixed(2)})<br>` +
-            `Antipode: ${antipodeLoc} (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
+          document.getElementById('clicked-name').textContent = clickedLoc;
+          document.getElementById('antipode-name').textContent = antipodeLoc;
+          document.getElementById('clicked-name').classList.remove('loading');
+          document.getElementById('antipode-name').classList.remove('loading');
         })
         .catch(() => {
-          // 지오코딩 실패 시 오류 메시지
-          info.innerHTML = `Clicked: Unknown location (${lat.toFixed(2)}, ${lng.toFixed(2)})<br>` +
-                           `Antipode: Unknown location (${antiLat.toFixed(2)}, ${antiLng.toFixed(2)})`;
+          document.getElementById('clicked-name').textContent = 'Unknown location';
+          document.getElementById('antipode-name').textContent = 'Unknown location';
+          document.getElementById('clicked-name').classList.remove('loading');
+          document.getElementById('antipode-name').classList.remove('loading');
         });
-        world.pointOfView({ lat: antiLat, lng: antiLng, altitude: 2 }, 700);
+
+      world.pointOfView({ lat: antiLat, lng: antiLng, altitude: 2 }, 700);
+      showNotification('Antipode found! 🌍');
     }
 
     world.onGlobeRightClick(({ lat, lng }) => {
-        showAntipode(lat, lng);
+      showAntipode(lat, lng);
     });
   </script>
 </body>
