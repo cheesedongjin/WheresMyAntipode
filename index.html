@@ -142,12 +142,56 @@
       backdrop-filter: blur(20px);
       border: 1px solid var(--glass-border);
       border-radius: 16px;
+      z-index: 1000;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      transition: transform 0.3s ease;
+    }
+
+    .control-panel.collapsed {
+      transform: translateY(calc(100% - 60px));
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--glass-border);
+      user-select: none;
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .toggle-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 0.5rem;
+      border-radius: 8px;
+    }
+
+    .toggle-btn:hover {
+      color: var(--text-primary);
+      background: var(--glass-bg);
+      transform: scale(1.1);
+    }
+
+    .panel-content {
       padding: 1.5rem;
       display: flex;
       flex-direction: column;
       gap: 1rem;
-      z-index: 1000;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     }
 
     #info {
@@ -293,7 +337,14 @@
         bottom: 1rem;
         left: 1rem;
         right: 1rem;
+      }
+
+      .panel-content {
         padding: 1rem;
+      }
+
+      .control-panel.collapsed {
+        transform: translateY(calc(100% - 50px));
       }
 
       #coord-form {
@@ -372,6 +423,31 @@
       font-size: 0.9rem;
       color: var(--text-secondary);
     }
+
+    input[type="number"] {
+      background: var(--secondary-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: 'Inter', monospace;
+      width: 120px;
+      transition: all 0.3s ease;
+      -moz-appearance: textfield; /* Add for Firefox */
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none; /* Add for WebKit browsers */
+      margin: 0;
+    }
+
+    input[type="number"]:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
   </style>
   <script>
     if ("serviceWorker" in navigator) {
@@ -394,35 +470,45 @@
     <div id="globeViz"></div>
   </div>
 
-  <div class="control-panel">
-    <div class="instruction">
-      <div class="instruction-title">🌍 Find Your Antipode</div>
-      <div class="instruction-text">Right-click anywhere on the globe or enter coordinates below</div>
+  <div class="control-panel" id="controlPanel">
+    <div class="panel-header" id="panelHeader">
+      <div class="panel-title">
+        <span>🌍</span>
+        <span>Antipode Finder</span>
+      </div>
+      <button class="toggle-btn" id="toggleBtn">▼</button>
     </div>
 
-    <form id="coord-form">
-      <div class="input-group">
-        <label for="latInput">Latitude</label>
-        <input id="latInput" type="number" step="0.01" min="-90" max="90" placeholder="0.00" />
+    <div class="panel-content">
+      <div class="instruction">
+        <div class="instruction-title">🌍 Find Your Antipode</div>
+        <div class="instruction-text">Right-click anywhere on the globe or enter coordinates below</div>
       </div>
-      <div class="input-group">
-        <label for="lngInput">Longitude</label>
-        <input id="lngInput" type="number" step="0.01" min="-180" max="180" placeholder="0.00" />
-      </div>
-      <button type="submit">🔍 Find Antipode</button>
-    </form>
 
-    <div id="info" style="display: none;">
-      <div class="result-info">
-        <div class="location-card">
-          <div class="location-title">📍 Clicked Location</div>
-          <div class="location-name" id="clicked-name">Loading...</div>
-          <div class="location-coords" id="clicked-coords"></div>
+      <form id="coord-form">
+        <div class="input-group">
+          <label for="latInput">Latitude</label>
+          <input id="latInput" type="number" step="0.01" min="-90" max="90" placeholder="0.00" />
         </div>
-        <div class="location-card antipode">
-          <div class="location-title">🌏 Antipode</div>
-          <div class="location-name" id="antipode-name">Loading...</div>
-          <div class="location-coords" id="antipode-coords"></div>
+        <div class="input-group">
+          <label for="lngInput">Longitude</label>
+          <input id="lngInput" type="number" step="0.01" min="-180" max="180" placeholder="0.00" />
+        </div>
+        <button type="submit">🔍 Find Antipode</button>
+      </form>
+
+      <div id="info" style="display: none;">
+        <div class="result-info">
+          <div class="location-card">
+            <div class="location-title">📍 Clicked Location</div>
+            <div class="location-name" id="clicked-name">Loading...</div>
+            <div class="location-coords" id="clicked-coords"></div>
+          </div>
+          <div class="location-card antipode">
+            <div class="location-title">🌏 Antipode</div>
+            <div class="location-name" id="antipode-name">Loading...</div>
+            <div class="location-coords" id="antipode-coords"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -431,6 +517,18 @@
   <script type="module">
     import * as THREE from 'https://esm.sh/three@0.153.0';
     import Globe from 'https://esm.sh/globe.gl@2.41.1';
+
+    // 패널 토글 함수
+    function togglePanel() {
+      const panel = document.getElementById('controlPanel');
+      const toggleBtn = document.getElementById('toggleBtn');
+
+      panel.classList.toggle('collapsed');
+      toggleBtn.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+    }
+
+    // Attach event listener to the panel header
+    document.getElementById('panelHeader').addEventListener('click', togglePanel);togglePanel = togglePanel;
 
     // Globe 초기화
     const world = Globe()(document.getElementById('globeViz'))
@@ -624,6 +722,12 @@
 
       world.pointOfView({ lat: antiLat, lng: antiLng, altitude: 2 }, 700);
       showNotification('Antipode found! 🌍');
+
+      // 패널이 접혀있다면 자동으로 펼치기
+      const panel = document.getElementById('controlPanel');
+      if (panel.classList.contains('collapsed')) {
+        togglePanel();
+      }
     }
 
     world.onGlobeRightClick(({ lat, lng }) => {
