@@ -274,14 +274,28 @@
     const latInput = document.getElementById('latInput');
     const lngInput = document.getElementById('lngInput');
     const countryInput = document.getElementById('countryInput');
+    const countriesList = document.getElementById('countriesList');
+    let countryNames = [];
 
     countryCentersPromise.then(cs => {
-      const list = document.getElementById('countriesList');
-      Object.keys(cs).sort().forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        list.appendChild(opt);
-      });
+      countryNames = Object.keys(cs).sort();
+      updateCountrySuggestions('');
+    });
+
+    function updateCountrySuggestions(query) {
+      countriesList.innerHTML = '';
+      countryNames
+        .filter(name => name.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 20)
+        .forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          countriesList.appendChild(opt);
+        });
+    }
+
+    countryInput.addEventListener('input', () => {
+      updateCountrySuggestions(countryInput.value);
     });
 
     countryInput.addEventListener('change', () => {
