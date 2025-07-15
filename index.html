@@ -22,7 +22,12 @@
   <div id="globe-container">
     <div id="globeViz"></div>
     <div id="info">Right-click anywhere on the globe to find the antipodal location.</div>
-    </div>
+    <form id="coord-form">
+      <input id="latInput" type="number" step="0.01" min="-90" max="90" placeholder="Latitude" />
+      <input id="lngInput" type="number" step="0.01" min="-180" max="180" placeholder="Longitude" />
+      <button type="submit">Go</button>
+    </form>
+  </div>
 
   <script type="module">
     import * as THREE from 'https://esm.sh/three@0.153.0';
@@ -110,7 +115,17 @@
     animateMarkers(); // Start the animation loop
 
     const info = document.getElementById('info');
-    // Removed the form-related elements: form, latInput, lngInput
+    const form = document.getElementById('coord-form');
+    const latInput = document.getElementById('latInput');
+    const lngInput = document.getElementById('lngInput');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const lat = parseFloat(latInput.value);
+      const lng = parseFloat(lngInput.value);
+      if (isNaN(lat) || isNaN(lng)) return;
+      showAntipode(lat, lng);
+    });
 
     // 좌표 → 지명 (OSM)
     function reverseGeocode(lat, lng) {
