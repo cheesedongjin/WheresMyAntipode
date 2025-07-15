@@ -328,39 +328,62 @@
       try {
         const data = await countriesDataPromise;
         const pt = turf.point([lng, lat]);
-        const country = data.features.find(f => turf.booleanPointInPolygon(pt, f));
+        const country = data.features.find(f =>
+          turf.booleanPointInPolygon(pt, f)
+        );
         return country ? country.properties.NAME : 'Ocean';
       } catch (e) {
+        console.error('reverseGeocode 오류:', e);
         return 'Unknown location';
       }
     }
 
-    const NEAR_THRESHOLD_KM = 200;
+    const NEAR_THRESHOLD_KM = 400;
 
     async function nearestCountry(lat, lng, threshold = NEAR_THRESHOLD_KM) {
       const data = await countriesDataPromise;
       const pt = turf.point([lng, lat]);
-      let min = Infinity;
+      let minDist = threshold;
       let nearest = null;
+
       data.features.forEach(f => {
-        const line = turf.polygonToLine(f);
-        const dist = turf.pointToLineDistance(pt, line, { units: 'kilometers' });
-        if (dist < min) {
-          min = dist;
-          nearest = f.properties.NAME;
+        const geom = f.geometry;
+        // Polygon 또는 MultiPolygon 둘 다 지원하도록 분기
+        if (geom.type === 'Polygon') {
+          try {
+            const line = turf.polygonToLine(f);
+            const d = turf.pointToLineDistance(pt, line, { units: 'kilometers' });
+            if (d < minDist) { minDist = d; nearest = f.properties.NAME; }
+          } catch (_) { /* skip invalid */ }
+        }
+        else if (geom.type === 'MultiPolygon') {
+          // 각 서브폴리곤마다 line 으로 변환
+          geom.coordinates.forEach(polygonCoords => {
+            const polyFeat = {
+              type: 'Feature',
+              geometry: { type: 'Polygon', coordinates: polygonCoords },
+              properties: f.properties
+            };
+            try {
+              const line = turf.polygonToLine(polyFeat);
+              const d = turf.pointToLineDistance(pt, line, { units: 'kilometers' });
+              if (d < minDist) { minDist = d; nearest = f.properties.NAME; }
+            } catch (_) { /* skip invalid */ }
+          });
         }
       });
-      return min <= threshold ? nearest : null;
+
+      return nearest;
     }
 
     async function getCountryFeature(lat, lng) {
-      try {
-        const data = await countriesDataPromise;
-        const pt = turf.point([lng, lat]);
-        return data.features.find(f => turf.booleanPointInPolygon(pt, f));
-      } catch (e) {
-        return null;
-      }
+      const data = await countriesDataPromise;
+      const pt = turf.point([lng, lat]);
+      // 점이 폴리곤 안에 있을 때 그 피처를 반환
+      const feature = data.features.find(f =>
+        turf.booleanPointInPolygon(pt, f)
+      );
+      return feature || null;
     }
 
     // 개선된 안티포드 표시
@@ -433,7 +456,8 @@
           document.getElementById('clicked-name').classList.remove('loading');
           document.getElementById('antipode-name').classList.remove('loading');
         })
-        .catch(() => {
+        .catch((e) => {
+          console.error('업데이트 오류:', e);
           document.getElementById('clicked-name').textContent = 'Unknown location';
           document.getElementById('antipode-name').textContent = 'Unknown location';
           document.getElementById('clicked-name').classList.remove('loading');
