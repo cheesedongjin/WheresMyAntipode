@@ -120,3 +120,20 @@ header nav a {
   color: inherit;
   text-decoration: none;
 }
+
+/* 404 page styling */
+#not-found {
+  height: calc(100% - 64px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+#not-found a {
+  color: #fff;
+  text-decoration: underline;
+}
+
