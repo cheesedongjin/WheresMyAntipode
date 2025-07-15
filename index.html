@@ -19,6 +19,13 @@
   <meta property="og:url" content="https://cheesedongjin.github.io/CheeseV/">
   <link rel="icon" href="icon.png">
   <link rel="stylesheet" href="style.css" />
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js");
+      });
+    }
+  </script>
 </head>
 <body>
   <header>
