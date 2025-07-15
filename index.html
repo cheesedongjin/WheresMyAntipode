@@ -59,6 +59,11 @@
 
       <form id="coord-form">
         <div class="input-group">
+          <label for="countryInput">Country</label>
+          <input id="countryInput" type="text" list="countriesList" placeholder="Search" />
+          <datalist id="countriesList"></datalist>
+        </div>
+        <div class="input-group">
           <label for="latInput">Latitude</label>
           <input id="latInput" type="number" step="0.01" min="-90" max="90" placeholder="0.00" />
         </div>
@@ -92,6 +97,19 @@
     import * as turf from 'https://esm.sh/@turf/turf@6';
 
     const countriesDataPromise = fetch('countries.geojson').then(res => res.json());
+
+    const countryCentersPromise = (async () => {
+      const cached = localStorage.getItem('countryCenters');
+      if (cached) return JSON.parse(cached);
+      const data = await countriesDataPromise;
+      const centers = {};
+      data.features.forEach(f => {
+        const c = turf.centroid(f);
+        centers[f.properties.name] = c.geometry.coordinates;
+      });
+      localStorage.setItem('countryCenters', JSON.stringify(centers));
+      return centers;
+    })();
 
     // 패널 토글 함수
     function togglePanel() {
@@ -214,6 +232,30 @@
     const form = document.getElementById('coord-form');
     const latInput = document.getElementById('latInput');
     const lngInput = document.getElementById('lngInput');
+    const countryInput = document.getElementById('countryInput');
+
+    countryCentersPromise.then(cs => {
+      const list = document.getElementById('countriesList');
+      Object.keys(cs).sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        list.appendChild(opt);
+      });
+    });
+
+    countryInput.addEventListener('change', () => {
+      const name = countryInput.value.trim();
+      countryCentersPromise.then(cs => {
+        if (!cs[name]) {
+          showNotification('Country not found', 'error');
+          return;
+        }
+        const [lng, lat] = cs[name];
+        latInput.value = lat.toFixed(2);
+        lngInput.value = lng.toFixed(2);
+        showAntipode(lat, lng);
+      });
+    });
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -252,6 +294,22 @@
       }
     }
 
+    async function nearestCountry(lat, lng) {
+      const data = await countriesDataPromise;
+      const pt = turf.point([lng, lat]);
+      let min = Infinity;
+      let nearest = null;
+      data.features.forEach(f => {
+        const line = turf.polygonToLine(f);
+        const dist = turf.pointToLineDistance(pt, line, { units: 'kilometers' });
+        if (dist < min) {
+          min = dist;
+          nearest = f.properties.name;
+        }
+      });
+      return nearest;
+    }
+
     // 개선된 안티포드 표시
     function showAntipode(lat, lng) {
       const antiLat = -lat;
@@ -288,7 +346,15 @@
 
       // 지명 정보 업데이트
       Promise.all([reverseGeocode(lat, lng), reverseGeocode(antiLat, antiLng)])
-        .then(([clickedLoc, antipodeLoc]) => {
+        .then(async ([clickedLoc, antipodeLoc]) => {
+          if (clickedLoc === 'Ocean') {
+            const near = await nearestCountry(lat, lng);
+            clickedLoc = `Ocean (near ${near})`;
+          }
+          if (antipodeLoc === 'Ocean') {
+            const near = await nearestCountry(antiLat, antiLng);
+            antipodeLoc = `Ocean (near ${near})`;
+          }
           document.getElementById('clicked-name').textContent = clickedLoc;
           document.getElementById('antipode-name').textContent = antipodeLoc;
           document.getElementById('clicked-name').classList.remove('loading');
