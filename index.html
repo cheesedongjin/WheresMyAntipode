@@ -163,13 +163,24 @@
     const highlightedCountries = [];
     world.polygonsData(highlightedCountries)
       .polygonAltitude(0.01)
-      .polygonCapColor(d => d.properties._role === 'start'
-        ? 'rgba(245,158,11,0.5)'
-        : 'rgba(239,68,68,0.5)')
+      .polygonCapColor(d => {
+        switch (d.properties._role) {
+          case 'start':
+            return 'rgba(245,158,11,0.5)';
+          case 'start-near':
+            return 'rgba(245,158,11,0.25)';
+          case 'antipode-near':
+            return 'rgba(239,68,68,0.25)';
+          default:
+            return 'rgba(239,68,68,0.5)'; // antipode
+        }
+      })
       .polygonSideColor(() => 'rgba(255,255,255,0.15)')
-      .polygonStrokeColor(d => d.properties._role === 'start'
-        ? '#f59e0b'
-        : '#ef4444');
+      .polygonStrokeColor(d =>
+        d.properties._role === 'start' || d.properties._role === 'start-near'
+          ? '#f59e0b'
+          : '#ef4444'
+      );
 
     // Collapse panel when the user interacts with the globe
     world.controls().addEventListener('start', () => {
@@ -433,6 +444,39 @@
 
       return nearest;
     }
+
+    async function nearestCountryFeature(lat, lng, threshold = NEAR_THRESHOLD_KM) {
+      const data = await countriesDataPromise;
+      const pt = turf.point([lng, lat]);
+      let minDist = threshold;
+      let nearest = null;
+
+      data.features.forEach(f => {
+        const geom = f.geometry;
+        if (geom.type === 'Polygon') {
+          try {
+            const line = turf.polygonToLine(f);
+            const d = turf.pointToLineDistance(pt, line, { units: 'kilometers' });
+            if (d < minDist) { minDist = d; nearest = f; }
+          } catch (_) { /* skip invalid */ }
+        } else if (geom.type === 'MultiPolygon') {
+          geom.coordinates.forEach(coords => {
+            const polyFeat = {
+              type: 'Feature',
+              geometry: { type: 'Polygon', coordinates: coords },
+              properties: f.properties
+            };
+            try {
+              const line = turf.polygonToLine(polyFeat);
+              const d = turf.pointToLineDistance(pt, line, { units: 'kilometers' });
+              if (d < minDist) { minDist = d; nearest = f; }
+            } catch (_) { /* skip invalid */ }
+          });
+        }
+      });
+
+      return minDist < threshold ? nearest : null;
+    }
     async function nearestCountryPoint(lat, lng, threshold = NEAR_THRESHOLD_KM) {
       const data = await countriesDataPromise;
       const pt = turf.point([lng, lat]);
@@ -509,32 +553,42 @@
         getCountryFeature(lat, lng),
         getCountryFeature(antiLat, antiLng),
         nearestCountryPoint(lat, lng),
-        nearestCountryPoint(antiLat, antiLng)
-      ]).then(([startF, antiF, startNear, antiNear]) => {
-        if (!startF && startNear) {
+        nearestCountryPoint(antiLat, antiLng),
+        nearestCountryFeature(lat, lng),
+        nearestCountryFeature(antiLat, antiLng)
+      ]).then(([startF, antiF, startNearPt, antiNearPt, startNearFeat, antiNearFeat]) => {
+        if (!startF && startNearPt) {
           lineGroup.add(
-            createNearLine(lat, lng, startNear.point[1], startNear.point[0], 0xf59e0b)
+            createNearLine(lat, lng, startNearPt.point[1], startNearPt.point[0], 0xf59e0b)
           );
           labelGroup.add(
-            createDistanceLabel(lat, lng, startNear.point[1], startNear.point[0], startNear.distance)
+            createDistanceLabel(lat, lng, startNearPt.point[1], startNearPt.point[0], startNearPt.distance)
           );
         }
-        if (!antiF && antiNear) {
+        if (!antiF && antiNearPt) {
           lineGroup.add(
-            createNearLine(antiLat, antiLng, antiNear.point[1], antiNear.point[0], 0xef4444)
+            createNearLine(antiLat, antiLng, antiNearPt.point[1], antiNearPt.point[0], 0xef4444)
           );
           labelGroup.add(
-            createDistanceLabel(antiLat, antiLng, antiNear.point[1], antiNear.point[0], antiNear.distance)
+            createDistanceLabel(antiLat, antiLng, antiNearPt.point[1], antiNearPt.point[0], antiNearPt.distance)
           );
         }
         if (startF) {
           const c = JSON.parse(JSON.stringify(startF));
           c.properties._role = 'start';
           highlightedCountries.push(c);
+        } else if (startNearFeat) {
+          const c = JSON.parse(JSON.stringify(startNearFeat));
+          c.properties._role = 'start-near';
+          highlightedCountries.push(c);
         }
         if (antiF) {
           const c = JSON.parse(JSON.stringify(antiF));
           c.properties._role = 'antipode';
+          highlightedCountries.push(c);
+        } else if (antiNearFeat) {
+          const c = JSON.parse(JSON.stringify(antiNearFeat));
+          c.properties._role = 'antipode-near';
           highlightedCountries.push(c);
         }
         world.polygonsData(highlightedCountries);
