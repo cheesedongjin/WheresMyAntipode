@@ -256,6 +256,43 @@
       line.computeLineDistances();
       return line;
     }
+    function createNearLine(lat1, lng1, lat2, lng2, color) {
+      const a = world.getCoords(lat1, lng1, 0.1);
+      const b = world.getCoords(lat2, lng2, 0.1);
+      const pts = [
+        new THREE.Vector3(a.x, a.y, a.z),
+        new THREE.Vector3(b.x, b.y, b.z)
+      ];
+      const geom = new THREE.BufferGeometry().setFromPoints(pts);
+      const mat = new THREE.LineDashedMaterial({
+        color,
+        dashSize: 1,
+        gapSize: 0.5,
+        opacity: 0.8,
+        transparent: true,
+        linewidth: 2
+      });
+      const line = new THREE.Line(geom, mat);
+      line.computeLineDistances();
+      return line;
+    }
+
+    function createDistanceLabel(lat1, lng1, lat2, lng2, distance) {
+      const a = world.getCoords(lat1, lng1, 0.1);
+      const b = world.getCoords(lat2, lng2, 0.1);
+      const mid = {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2,
+        z: (a.z + b.z) / 2
+      };
+      const label = new SpriteText(`${distance.toFixed(0)} km`);
+      label.color = '#ffffff';
+      label.textHeight = 2;
+      label.material.depthWrite = false;
+      label.position.set(mid.x, mid.y, mid.z);
+      return label;
+    }
+
 
     function clearMarkers() {
       markerGroup.clear();
@@ -268,22 +305,6 @@
 
     function clearLabels() {
       labelGroup.clear();
-    }
-
-    function createDistanceLabel(lat, lng, antiLat, antiLng, distance) {
-      const b = world.getCoords(lat, lng, 0.1);
-      const c = world.getCoords(antiLat, antiLng, 0.1);
-      const mid = {
-        x: (b.x + c.x) / 2,
-        y: (b.y + c.y) / 2,
-        z: (b.z + c.z) / 2
-      };
-      const label = new SpriteText(`${distance.toFixed(0)} km`);
-      label.color = '#ffffff';
-      label.textHeight = 2;
-      label.material.depthWrite = false;
-      label.position.set(mid.x, mid.y, mid.z);
-      return label;
     }
 
     // 개선된 마커 애니메이션
@@ -456,6 +477,41 @@
 
       return minDist < threshold ? nearest : null;
     }
+    async function nearestCountryPoint(lat, lng, threshold = NEAR_THRESHOLD_KM) {
+      const data = await countriesDataPromise;
+      const pt = turf.point([lng, lat]);
+      let minDist = threshold;
+      let nearest = null;
+      let nearestPt = null;
+      data.features.forEach(f => {
+        const geom = f.geometry;
+        if (geom.type === "Polygon") {
+          try {
+            const line = turf.polygonToLine(f);
+            const snapped = turf.nearestPointOnLine(line, pt, { units: "kilometers" });
+            if (snapped.properties.dist < minDist) {
+              minDist = snapped.properties.dist;
+              nearest = f;
+              nearestPt = snapped.geometry.coordinates;
+            }
+          } catch (_) { }
+        } else if (geom.type === "MultiPolygon") {
+          geom.coordinates.forEach(coords => {
+            const polyFeat = { type: "Feature", geometry: { type: "Polygon", coordinates: coords }, properties: f.properties };
+            try {
+              const line = turf.polygonToLine(polyFeat);
+              const snapped = turf.nearestPointOnLine(line, pt, { units: "kilometers" });
+              if (snapped.properties.dist < minDist) {
+                minDist = snapped.properties.dist;
+                nearest = f;
+                nearestPt = snapped.geometry.coordinates;
+              }
+            } catch (_) { }
+          });
+        }
+      });
+      return minDist < threshold ? { feature: nearest, point: nearestPt, distance: minDist } : null;
+    }
 
     async function getCountryFeature(lat, lng) {
       const data = await countriesDataPromise;
@@ -476,6 +532,7 @@
       clearLines();
       clearLabels();
       highlightedCountries.length = 0;
+      clearLabels();
       world.polygonsData(highlightedCountries);
 
       // 마커 생성
@@ -498,15 +555,33 @@
       Promise.all([
         getCountryFeature(lat, lng),
         getCountryFeature(antiLat, antiLng),
+        nearestCountryPoint(lat, lng),
+        nearestCountryPoint(antiLat, antiLng),
         nearestCountryFeature(lat, lng),
         nearestCountryFeature(antiLat, antiLng)
-      ]).then(([startF, antiF, startNear, antiNear]) => {
+      ]).then(([startF, antiF, startNearPt, antiNearPt, startNearFeat, antiNearFeat]) => {
+        if (!startF && startNearPt) {
+          lineGroup.add(
+            createNearLine(lat, lng, startNearPt.point[1], startNearPt.point[0], 0xf59e0b)
+          );
+          labelGroup.add(
+            createDistanceLabel(lat, lng, startNearPt.point[1], startNearPt.point[0], startNearPt.distance)
+          );
+        }
+        if (!antiF && antiNearPt) {
+          lineGroup.add(
+            createNearLine(antiLat, antiLng, antiNearPt.point[1], antiNearPt.point[0], 0xef4444)
+          );
+          labelGroup.add(
+            createDistanceLabel(antiLat, antiLng, antiNearPt.point[1], antiNearPt.point[0], antiNearPt.distance)
+          );
+        }
         if (startF) {
           const c = JSON.parse(JSON.stringify(startF));
           c.properties._role = 'start';
           highlightedCountries.push(c);
-        } else if (startNear) {
-          const c = JSON.parse(JSON.stringify(startNear));
+        } else if (startNearFeat) {
+          const c = JSON.parse(JSON.stringify(startNearFeat));
           c.properties._role = 'start-near';
           highlightedCountries.push(c);
         }
@@ -514,8 +589,8 @@
           const c = JSON.parse(JSON.stringify(antiF));
           c.properties._role = 'antipode';
           highlightedCountries.push(c);
-        } else if (antiNear) {
-          const c = JSON.parse(JSON.stringify(antiNear));
+        } else if (antiNearFeat) {
+          const c = JSON.parse(JSON.stringify(antiNearFeat));
           c.properties._role = 'antipode-near';
           highlightedCountries.push(c);
         }
