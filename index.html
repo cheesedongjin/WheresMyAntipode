@@ -286,7 +286,8 @@
       };
       const label = new SpriteText(`${distance.toFixed(0)} km`);
       label.color = '#ffffff';
-      label.textHeight = 2;
+      label.textHeight = 3;
+      label.fontWeight = 'bold';
       label.material.depthWrite = false;
       label.position.set(mid.x, mid.y, mid.z);
       return label;
