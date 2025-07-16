@@ -257,12 +257,11 @@
       return line;
     }
     function createNearLine(lat1, lng1, lat2, lng2, color) {
-      const a = world.getCoords(lat1, lng1, 0.01);
-      const b = world.getCoords(lat2, lng2, 0.01);
-      const pts = [
-        new THREE.Vector3(a.x, a.y, a.z),
-        new THREE.Vector3(b.x, b.y, b.z)
-      ];
+      const gc = turf.greatCircle([lng1, lat1], [lng2, lat2], { npoints: 64 });
+      const pts = gc.geometry.coordinates.map(([lng, lat]) => {
+        const { x, y, z } = world.getCoords(lat, lng, 0.01);
+        return new THREE.Vector3(x, y, z);
+      });
       const geom = new THREE.BufferGeometry().setFromPoints(pts);
       const mat = new THREE.LineDashedMaterial({
         color,
@@ -278,8 +277,8 @@
     }
 
     function createDistanceLabel(lat1, lng1, lat2, lng2, distance) {
-      const a = world.getCoords(lat1, lng1, 0.1);
-      const b = world.getCoords(lat2, lng2, 0.1);
+      const a = world.getCoords(lat1, lng1, 0.05);
+      const b = world.getCoords(lat2, lng2, 0.05);
       const mid = {
         x: (a.x + b.x) / 2,
         y: (a.y + b.y) / 2,
