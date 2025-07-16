@@ -257,8 +257,8 @@
       return line;
     }
     function createNearLine(lat1, lng1, lat2, lng2, color) {
-      const a = world.getCoords(lat1, lng1, 0.1);
-      const b = world.getCoords(lat2, lng2, 0.1);
+      const a = world.getCoords(lat1, lng1, 0.01);
+      const b = world.getCoords(lat2, lng2, 0.01);
       const pts = [
         new THREE.Vector3(a.x, a.y, a.z),
         new THREE.Vector3(b.x, b.y, b.z)
