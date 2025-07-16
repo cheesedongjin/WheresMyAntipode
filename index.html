@@ -645,6 +645,11 @@
     world.onGlobeRightClick(({ lat, lng }) => {
       showAntipode(lat, lng);
     });
+    world.onPolygonRightClick((_, c) => {
+      if (c && typeof c.lat === 'number' && typeof c.lng === 'number') {
+        showAntipode(c.lat, c.lng);
+      }
+    });
   </script>
 </body>
 </html>
